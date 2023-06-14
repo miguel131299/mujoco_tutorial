@@ -154,13 +154,20 @@ int main(int argc, const char** argv)
     glfwSetMouseButtonCallback(window, mouse_button);
     glfwSetScrollCallback(window, scroll);
 
-    // double arr_view[] = {89.608063, -11.588379, 5, 0.000000, 0.000000, 0.000000};
-    // cam.azimuth = arr_view[0];
-    // cam.elevation = arr_view[1];
-    // cam.distance = arr_view[2];
-    // cam.lookat[0] = arr_view[3];
-    // cam.lookat[1] = arr_view[4];
-    // cam.lookat[2] = arr_view[5];
+    double arr_view[] = {90, -45, 3, 0.000000, 0.000000, 0.000000};
+    cam.azimuth = arr_view[0];
+    cam.elevation = arr_view[1];
+    cam.distance = arr_view[2];
+    cam.lookat[0] = arr_view[3];
+    cam.lookat[1] = arr_view[4];
+    cam.lookat[2] = arr_view[5];
+
+    // m->opt.gravity[2] = -1;
+
+    // qpos is dim nqx1 = 7x1; 3 translations + 4 quaternions
+    d->qpos[2] = 0.1;
+    d->qvel[2] = 10;
+    d->qvel[0] = 10;
 
     // use the first while condition if you want to simulate for a period.
     while( !glfwWindowShouldClose(window))
@@ -173,6 +180,32 @@ int main(int argc, const char** argv)
         while( d->time - simstart < 1.0/60.0 )
         {
             mj_step(m, d);
+
+            // drag force = -c*v²*unit_vector(v); v = sqrt(vx²+vy²+vz²)
+            // vector (v) = vx i + vy j + vz k
+            // unit_vector(v) = vector(v)/v
+            // fx = -c*vx*vx
+            // fy = -c*vy*vy
+            // fz = -c*vz*vz
+
+            double vx, vy, vz;
+            vx = d->qvel[0];
+            vy = d->qvel[1];
+            vz = d->qvel[2];
+
+            double v;
+            v = sqrt(vx*vx + vy*vy + vz*vz);
+
+            double fx, fy, fz;
+            double c = 2;
+
+            fx = -c*v*vx;
+            fy = -c*v*vy;
+            fz = -c*v*vz;
+
+            d->qfrc_applied[0] = fx;
+            d->qfrc_applied[1] = fy;
+            d->qfrc_applied[2] = fz;
         }
 
        // get framebuffer viewport
@@ -180,9 +213,11 @@ int main(int argc, const char** argv)
         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
           // update scene and render
+        opt.frame = mjFRAME_WORLD;
+        cam.lookat[0] = d->qpos[0];
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);
-        //printf("{%f, %f, %f, %f, %f, %f};\n",cam.azimuth,cam.elevation, cam.distance,cam.lookat[0],cam.lookat[1],cam.lookat[2]);
+        // printf("{%f, %f, %f, %f, %f, %f};\n",cam.azimuth,cam.elevation, cam.distance,cam.lookat[0],cam.lookat[1],cam.lookat[2]);
 
         // swap OpenGL buffers (blocking call due to v-sync)
         glfwSwapBuffers(window);
