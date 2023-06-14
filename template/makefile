@@ -1,7 +1,7 @@
 
 #LINUX
 COMMON=-O2 -I../../include -L../../lib -pthread -Wl,-no-as-needed -Wl,-rpath,'$$ORIGIN'/../../lib
-LIBS = -lmujoco -lglfw
+LIBS = -lmujoco -lglfw -lm
 CC = gcc
 
 
