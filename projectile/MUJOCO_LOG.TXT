@@ -1,0 +1,6 @@
+Wed Jun 14 20:19:47 2023
+WARNING: mju_openResource: unknown file 'hello.xml'
+
+Wed Jun 14 20:19:47 2023
+ERROR: Load model error: mjParseXML: could not open file 'hello.xml'
+
