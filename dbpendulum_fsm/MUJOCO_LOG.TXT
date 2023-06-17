@@ -1,0 +1,6 @@
+Sat Jun 17 17:11:12 2023
+WARNING: mju_openResource: unknown file './doublependulum.xml'
+
+Sat Jun 17 17:11:12 2023
+ERROR: Load model error: mjParseXML: could not open file './doublependulum.xml'
+
