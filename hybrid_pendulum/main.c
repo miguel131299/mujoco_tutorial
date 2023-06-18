@@ -4,16 +4,14 @@
 //#include<unistd.h> //for usleep
 //#include <math.h>
 
-#include "mujoco/mujoco.h"
-#include "GLFW/glfw3.h"
+#include "mujoco.h"
+#include "glfw3.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 
 //simulation end time
 double simend = 5;
-
-int lqr = 0;
 
 //related to writing data to a file
 FILE *fid;
@@ -27,8 +25,8 @@ const int data_frequency = 10; //frequency at which data is written to a file
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "./";
-char xmlfile[] = "dbpendulum_lqr.xml";
+char path[] = "../myproject/template_pendulum/";
+char xmlfile[] = "pendulum.xml";
 
 
 char datafile[] = "data.csv";
@@ -175,133 +173,9 @@ void set_velocity_servo(const mjModel* m,int actuator_no,double kv)
 }
 /******************************/
 
-void f(const mjModel* m, mjData* d, double inputs[5], double outputs[4]) {
-    // state q1, q1dot, q2, q2dot
-    // inputs = q1, q1dot, q2, q2dot, u
-    // outputs = q1dot, q1dotdot, q2dot, q2dotdot
-
-    d->qpos[0] = inputs[0];
-    d->qvel[0] = inputs[1];
-    d->qpos[1] = inputs[2];
-    d->qvel[1] = inputs[3];
-    d->ctrl[0] = inputs[4];
-
-    // after setting the state and control, 
-    // we need to call mj_forward to update the dynamics
-    mj_forward(m, d);
-
-    double q1dot = d->qvel[0];
-    double q2dot = d->qvel[1];
-
-    // Equation of motion
-    // M * qacc + qrfc_bias = ctrl
-    // qacc = M^-1 * (ctrl - qrfc_bias) = q1dotdot, q2dotdot
-
-    const int nv = 2;
-    double M[nv*nv];
-    mj_fullM(m, M, d->qM);
-
-    // M = {M[0] M[1], M[2] M[3]}
-    double det_M = M[0]*M[3] - M[1]*M[2];
-    double Minv[] = {M[3], -M[1], -M[2], M[0]};
-    for (size_t i = 0; i < 4; i++)
-    {
-        Minv[i] = Minv[i] / det_M;
-    }
-
-    double qacc[nv];
-    double f[nv];
-    f[1] = 0 - d->qfrc_bias[0]; // no control because there is no control on link 1
-    f[2] = d->ctrl[0] - d->qfrc_bias[1];
-
-    mju_mulMatVec(qacc, Minv, f, 2, 2);
-
-    double q1dotdot = qacc[0];
-    double q2dotdot = qacc[1];    
-
-
-    outputs[0] = q1dot;
-    outputs[1] = q1dotdot;
-    outputs[2] = q2dot;
-    outputs[3] = q2dotdot;
-}
-
 //**************************
 void init_controller(const mjModel* m, mjData* d)
 {
-  int i,j;
-  double input[5]={0};
-  double output[4]={0};
-  double pert = 0.001;
-
-  //input[0] = 0.1;
-  //input[1] = 0.1;
-  //input[4] = 0.1;
-  double f0[4] = {0};
-  f(m,d,input,output);
-  //printf("%f %f %f %f \n",output[0],output[1],output[2],output[3]);
-  for (i=0;i<4;i++)
-    f0[i] = output[i];
-
-  double A[4][4]={0};
-
-  j = 0;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
-
-  j = 1;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
-
-  j = 2;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
-
-  j = 3;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
-
-      printf("A = [...\n");
-  for (i=0;i<4;i++)
-  {
-    for (j=0;j<4;j++)
-    {
-      printf("%f ",A[i][j]);
-    }
-    printf(";\n");
-  }
-  printf(" ];\n\n");
-
-  double B[4] = {0};
-  j = 4;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    B[i] = (output[i]-f0[i])/pert;
-
-    printf("B = [...\n");
-  for (i=0;i<4;i++)
-    printf("%f ;\n",B[i]);
-  printf(" ];\n\n");
-
 
 }
 
@@ -309,24 +183,7 @@ void init_controller(const mjModel* m, mjData* d)
 void mycontroller(const mjModel* m, mjData* d)
 {
   //write control here
-  if (lqr == 1)
-  {
-  //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
-  double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};    d->ctrl[0] = -K[0]*d->qpos[0] - K[1]*d->qvel[0] - K[2]*d->qpos[1] - K[3]*d->qvel[1]; 
-  }
 
-  if (lqr==1)
-  {
-    double noise;
-    mju_standardNormal(&noise);
-    int body = 2;
-    d->xfrc_applied[6*body+0] = 2*noise;
-    body = 1;
-    d->xfrc_applied[6*body+0] = 2*noise;
-    d->qfrc_applied[0]=noise;
-    d->qfrc_applied[1]=noise;
-  }
-  
 
   //write data here (dont change/dete this function call; instead write what you need to save in save_data)
   if ( loop_index%data_frequency==0)
@@ -412,9 +269,6 @@ int main(int argc, const char** argv)
     init_save_data();
     init_controller(m,d);
 
-    lqr = 1;
-    d->qpos[0] = 0.02;
-
     // use the first while condition if you want to simulate for a period.
     while( !glfwWindowShouldClose(window))
     {
@@ -438,6 +292,9 @@ int main(int argc, const char** argv)
         mjrRect viewport = {0, 0, 0, 0};
         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
+        //opt.frame = mjFRAME_WORLD; //mjFRAME_BODY
+        //opt.flags[mjVIS_COM]  = 1 ; //mjVIS_JOINT;
+        //opt.flags[mjVIS_JOINT]  = 1 ;
           // update scene and render
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);
