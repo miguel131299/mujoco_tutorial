@@ -4,14 +4,18 @@
 //#include<unistd.h> //for usleep
 //#include <math.h>
 
-#include "mujoco.h"
-#include "glfw3.h"
+#include "mujoco/mujoco.h"
+#include "GLFW/glfw3.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 
 //simulation end time
 double simend = 5;
+
+int fsm;
+#define fsm_swing 0
+#define fsm_free 1
 
 //related to writing data to a file
 FILE *fid;
@@ -25,7 +29,7 @@ const int data_frequency = 10; //frequency at which data is written to a file
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "../myproject/template_pendulum/";
+char path[] = "./";
 char xmlfile[] = "pendulum.xml";
 
 
@@ -184,7 +188,119 @@ void mycontroller(const mjModel* m, mjData* d)
 {
   //write control here
 
+  const int nv = 6;
+  const int nv1 = 3;
+  double M[nv*nv];
+  mj_fullM(m,M,d->qM);
+  //original system
+  // M0 M1 M2
+  // M3 M4 M5
+  // M6 M7 M8
 
+  //two pendulums
+  // M0 M1 M2 M3 M4 M5
+  // M6 M7 M8 M9 M10 M11
+  // M12 M13 M14 M15 M16 M17
+  // ...
+  // ..
+  // ...
+  // printf("%f %f %f \n",M[0],M[1],M[2]);
+  // printf("%f %f %f \n",M[3],M[4],M[5]);
+  // printf("%f %f %f \n",M[6],M[7],M[8]);
+  double M1[nv1*nv1];
+  M1[0] = M[0];  M1[1] = M[1];  M1[2] = M[2];
+  M1[3] = M[6];  M1[4] = M[7];  M1[5] = M[8];
+  M1[6] = M[12];  M1[7] = M[13];  M1[8] = M[14];
+
+  double qddot[nv];
+  qddot[0] = d->qacc[0];
+  qddot[1] = d->qacc[1];
+  qddot[2] = d->qacc[2];
+
+  double f[nv];
+  f[0] = d->qfrc_bias[0];
+  f[1] = d->qfrc_bias[1];
+  f[2] = d->qfrc_bias[2];
+
+  double lhs[3];
+  double M_qddot[3]; //=M*qddot
+  mju_mulMatVec(M_qddot,M1,qddot,3,3);
+  //lhs = M*qddot + f
+  lhs[0]=M_qddot[0]+f[0];
+  lhs[1]=M_qddot[1]+f[1];
+  lhs[2]=M_qddot[2]+f[2];
+
+  //Fx, Fy, tau_y
+  double tau[nv];
+  tau[0] = d->qfrc_applied[0]; //Fx
+  tau[1] = d->qfrc_applied[1]; //Fz
+  tau[2] = d->qfrc_applied[2]; //tau_y
+
+  int i;
+  double J0[3*nv];
+  for (i=0;i<3*nv;i++)
+    J0[i] = d->efc_J[i];
+
+
+
+  double JT_F[3];
+  double J1[nv1*nv1];
+  J1[0] = J0[0];  J1[1] = J0[1];  J1[2] = J0[2];
+  J1[3] = J0[6];  J1[4] = J0[7];  J1[5] = J0[8];
+  J1[6] = J0[12];  J1[7] = J0[13];  J1[8] = J0[14];
+  //J[3*nv] = J[3x6]
+  // J0 J1 J2 J3 J4 J5
+  // J6 J7 J8 J9 J10 J11
+  // J12 J13 J14 J15 J16 J17
+
+  double F0[3];
+  F0[0] = d->efc_force[0];
+  F0[1] = d->efc_force[1];
+  F0[2] = d->efc_force[2];
+  mju_mulMatTVec(JT_F,J1,F0,3,3);
+
+  // mju_mulMatTVec(JT_F,J0,F0,3,3);
+
+  // double F0[3];
+  // F0[0] = d->efc_force[0];
+  // F0[1] = d->efc_force[1];
+  // F0[2] = d->efc_force[2];
+  // mju_mulMatTVec(JT_F,J1,F0,3,3);
+  // double rhs[3];
+  // rhs[0] = tau[0] + JT_F[0];
+  // rhs[1] = tau[1] + JT_F[1];
+  // rhs[2] = tau[2] + JT_F[2];
+
+  // // verify equations
+  // printf("eqn1: %f %f \n",lhs[0],rhs[0]);
+  // printf("eqn2: %f %f \n",lhs[1],rhs[1]);
+  // printf("eqn3: %f %f \n",lhs[2],rhs[2]);
+
+    //transitions
+  if (fsm==fsm_swing && d->qpos[5]>1)
+  {
+    fsm = fsm_free;
+  }
+
+  //actions
+  if (fsm==fsm_swing)
+  {
+    d->qfrc_applied[2] = -1*(d->qvel[2]-5);
+
+
+
+    d->qfrc_applied[3] =  JT_F[0];
+    d->qfrc_applied[4] =  JT_F[1];
+    d->qfrc_applied[5] =  JT_F[2] + d->qfrc_applied[2];
+  }
+  if (fsm==fsm_free)
+  {
+    d->qfrc_applied[3] =  0;
+    d->qfrc_applied[4] =  0;
+    d->qfrc_applied[5] =  0;
+  }
+
+    //printf("*****\n");
   //write data here (dont change/dete this function call; instead write what you need to save in save_data)
   if ( loop_index%data_frequency==0)
     {
@@ -192,7 +308,6 @@ void mycontroller(const mjModel* m, mjData* d)
     }
   loop_index = loop_index + 1;
 }
-
 
 //************************
 // main function
@@ -269,6 +384,9 @@ int main(int argc, const char** argv)
     init_save_data();
     init_controller(m,d);
 
+    d->qpos[2] = -1.57;
+    d->qpos[5] = d->qpos[2];
+    
     // use the first while condition if you want to simulate for a period.
     while( !glfwWindowShouldClose(window))
     {
@@ -292,9 +410,9 @@ int main(int argc, const char** argv)
         mjrRect viewport = {0, 0, 0, 0};
         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
-        //opt.frame = mjFRAME_WORLD; //mjFRAME_BODY
-        //opt.flags[mjVIS_COM]  = 1 ; //mjVIS_JOINT;
-        //opt.flags[mjVIS_JOINT]  = 1 ;
+        // opt.frame = mjFRAME_WORLD; //mjFRAME_BODY
+        // opt.flags[mjVIS_COM]  = 1 ; //mjVIS_JOINT;
+        opt.flags[mjVIS_JOINT]  = 1 ;
           // update scene and render
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);

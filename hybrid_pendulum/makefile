@@ -1,26 +1,17 @@
 
-#MAC
-COMMON=-O2 -I../../include -L../../bin -mavx -pthread
-LIBS = -w -lmujoco200 -lglfw.3
+#LINUX
+COMMON=-O2 -I../../include -L../../lib -pthread -Wl,-no-as-needed -Wl,-rpath,'$$ORIGIN'/../../lib
+LIBS = -lmujoco -lglfw -lm
 CC = gcc
 
-#LINUX
-#COMMON=-O2 -I../../include -L../../bin -mavx -pthread -Wl,-rpath,'$$ORIGIN'
-#LIBS = -lmujoco200 -lGL -lm -lglew ../../bin/libglfw.so.3
-#CC = gcc
 
-#WINDOWS
-#COMMON=/O2 /MT /EHsc /arch:AVX /I../../include /Fe../../bin/
-#LIBS = ../../bin/glfw3.lib  ../../bin/mujoco200.lib
-#CC = cl
-
-ROOT = template_pendulum
+ROOT = hybrid_pendulum
 
 all:
-	$(CC) $(COMMON) main.c $(LIBS) -o ../../bin/$(ROOT)
+	$(CC) $(COMMON) main.c $(LIBS) -o $(ROOT)
 
 main.o:
 	$(CC) $(COMMON) -c main.c
 
 clean:
-	rm *.o ../../bin/$(ROOT)
+	rm *.o $(ROOT)
