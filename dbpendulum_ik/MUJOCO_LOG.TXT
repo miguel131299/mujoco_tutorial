@@ -1,0 +1,10 @@
+Sat Jun 17 19:00:56 2023
+WARNING: mju_openResource: unknown file './dbpendulum_ik.xml'
+
+Sat Jun 17 19:00:56 2023
+ERROR: Load model error: mjParseXML: could not open file './dbpendulum_ik.xml'
+
+Sat Jun 17 19:24:23 2023
+ERROR: Load model error: Error: unrecognized name of sensorized object in sensor '' (id = 0)
+Object name = , id = 0, line = 25, column = -1
+

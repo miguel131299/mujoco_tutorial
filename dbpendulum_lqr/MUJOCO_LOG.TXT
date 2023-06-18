@@ -1,0 +1,6 @@
+Sun Jun 18 15:59:41 2023
+WARNING: mju_openResource: unknown file './dbpendulum_lqr.xml'
+
+Sun Jun 18 15:59:41 2023
+ERROR: Load model error: mjParseXML: could not open file './dbpendulum_lqr.xml'
+
