@@ -4,8 +4,8 @@
 //#include<unistd.h> //for usleep
 //#include <math.h>
 
-#include "mujoco.h"
-#include "glfw3.h"
+#include "mujoco/mujoco.h"
+#include "GLFW/glfw3.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
@@ -33,7 +33,7 @@ double simend = 2*3.14/omega + 0.25;
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "../myproject/manipulator_ik/";
+char path[] = "./";
 char xmlfile[] = "manipulator.xml";
 
 

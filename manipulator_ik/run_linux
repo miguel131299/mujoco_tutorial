@@ -1,0 +1,4 @@
+reset
+make clean
+make
+./manipulator_ik
