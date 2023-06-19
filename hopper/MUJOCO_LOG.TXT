@@ -1,0 +1,6 @@
+Sun Jun 18 20:01:05 2023
+WARNING: mju_openResource: unknown file './pendulum.xml'
+
+Sun Jun 18 20:01:05 2023
+ERROR: Load model error: mjParseXML: could not open file './pendulum.xml'
+
